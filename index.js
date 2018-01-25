@@ -31,8 +31,19 @@ app.get("/test2", (request, response) => {
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-wss.on("connection", function connection(client, req) {
-  client.on("message", function incoming(message) {
+let connectedUser = {};
+
+wss.on("connection", function connection(wsclient, req) {
+  const currentUser = {
+    client: wsclient,
+    authenticated: false,
+    username: "anonymous",
+  };
+  console.log(">-- new WS connection");
+
+
+
+  wsclient.on("message", function incoming(message) {
     /*
     if (message === "Bonjour") {
       wss.clients.forEach(function each(client) {
@@ -42,10 +53,39 @@ wss.on("connection", function connection(client, req) {
       });
     }
     */
-    client.send('Message reçu : '+message);
+    //wsclient.send('Message reçu : '+message);
+    if (!currentUser.authenticated) {
+      try {
+        const O_message = JSON.parse(message);
+        if (O_message && O_message.username) {
+          if (connectedUser.hasOwnProperty(O_message.username)) {
+            wsclient.send("ERROR : username already in use");
+          } else {
+            currentUser.username =  O_message.username;
+            currentUser.authenticated = true;
+            connectedUser[O_message.username] = currentUser;
+            console.log("o-- new User connected : "+currentUser.username);
+            console.log(">-- Number of users connected : "+Object.keys(connectedUser).length);
+          }
+        } else {
+          wsclient.send("ERROR : you are not authenticated");
+          console.log("<-- authentication failed : "+O_message);
+        }
+      } catch (e) {
+        console.log("<-- authentication failed : "+message);
+      }
+    } else {
+      console.log(">-- message from : '"+currentUser.username+"' : "+message);
+    }
+  });
+
+  wsclient.on("close", function onclose() {
+    console.log("x-- User disconnected : "+currentUser.username);
+    console.log(">-- Number of users connected : "+(connectedUser.length > 0 ? connectedUser.length : 0));
+    delete currentUser.username;
   });
 });
 
-server.listen(3000, () => {
+server.listen(6455, () => {
   console.log("Server started");
 });
