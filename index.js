@@ -89,8 +89,9 @@ wss.on("connection", function connection(wsclient, req) {
       for (var username in connectedUser) {
         if (connectedUser.hasOwnProperty(username)) {
           let user = connectedUser[username];
-          if (user.username !== currentUser.username && user.client.readyState === WebSocket.OPEN) {
-            user.client.send(message);
+          //if (user.username !== currentUser.username && user.client.readyState === WebSocket.OPEN) {
+          if (user.client.readyState === WebSocket.OPEN) {
+            user.client.send(JSON.stringify({from: currentUser.username, message: message}));
           }
         }
       }
